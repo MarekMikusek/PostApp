@@ -11,7 +11,7 @@ return array(
             'mail' => array(
                 'type' => 'segment',
                 'options' => array(
-                    'route' => '/mail[/:id]',
+                    'route' => '/mail[/:id][/:folder]',
                     'constraints' => array(
                         'id' => '[0-9]+',
                     ),
