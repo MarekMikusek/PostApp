@@ -10,6 +10,7 @@ use Zend\Mail\Transport\SmtpOptions;
 use Zend\Mvc\Controller\AbstractRestfulController;
 use Zend\View\Model\JsonModel;
 use Zend\Mail\Transport\Smtp as SmtpTransport;
+use Zend\Mime;
 
 class MailController extends AbstractRestfulController
 {
@@ -68,14 +69,42 @@ class MailController extends AbstractRestfulController
 
     public function create($data)
     {
-        //$data = json_decode($data);
+        $text = new Mime\Part();
+        $text->type = Mime\Mime::TYPE_TEXT;
+        $text->charset = 'utf-8';
+        $attachments = $this->getRequest()->getFiles()->toArray()['attachment'];
+
+        $text = new Mime\Part();
+        $text->type = Mime\Mime::TYPE_TEXT;
+        $text->charset = 'utf-8';
+        $text->setContent($data['body']);
+
+        $mimeMessage = new Mime\Message();
+
+        $mimeMessage ->setParts([$text]);
+
+        foreach ($attachments as $attachment) {
+            $fileContent = fopen($attachment['tmp_name'],'r');
+            $attachmentToMail = new Mime\Part($fileContent);
+            $attachmentToMail->type = $attachment['type'];
+            $attachmentToMail->filename = $attachment['name'];
+            $attachmentToMail->disposition = Mime\Mime::DISPOSITION_ATTACHMENT;
+            $attachmentToMail->encoding = Mime\Mime::ENCODING_BASE64;
+            $mimeMessage->addPart($attachmentToMail);
+        }
+
+
         $message = new \Zend\Mail\Message();
-        $message->setBody($data['body'])
-            ->setSubject($data['subject'])
-            ->setTo($data['to'])
+        $message ->setBody($mimeMessage);
+        $message ->setSubject($data['subject'])
+            ->setTo($data['receiverEmail'])
             ->setFrom("marek.mikusek@onet.eu");
-           // ->setCc($data['cc'])
-           // ->setBcc($data['bcc'],'');
+        if (isset($data['cc'])) {
+            $message->setCc($data['cc']);
+        }
+        if (isset($data['bcc'])) {
+            $message->setBcc($data['bcc'], '');
+        }
         $transport = new SmtpTransport();
         $options = new SmtpOptions($this->getServiceLocator()->get('config')['smtp']);
         $transport->setOptions($options);
@@ -93,7 +122,7 @@ class MailController extends AbstractRestfulController
     {
         $id = (int)$this->params()->fromRoute('id', 0);
         if ($this->params('attachmentId')) {
-           return $this->openAttachment($id, $this->params('folder'), $this->params('attachmentId'));
+            return $this->openAttachment($id, $this->params('folder'), $this->params('attachmentId'));
         } else {
             $connectionToMailBox = $this->ConnectToMailBox();
             return new JsonModel($this->readMail($connectionToMailBox->getMessage($id), 1));
@@ -153,7 +182,7 @@ class MailController extends AbstractRestfulController
         if (!$partToOpen) {
             return false;
         } else {
-            $content=$this->decode($partToOpen);
+            $content = $this->decode($partToOpen);
 //            if ($partToOpen->getHeader('contenttransferencoding')->getFieldValue() == 'base64') {
 //                $content = base64_decode($partToOpen->getContent());
 //            } elseif ($partToOpen->getHeader('contenttransferencoding')->getFieldValue() == 'quoted-encoding') {
@@ -169,9 +198,9 @@ class MailController extends AbstractRestfulController
         $response = $this->getResponse();
         $response->setContent($content);
         $response->getHeaders()
-            ->addHeaderLine('Content-Type',$contentType)
+            ->addHeaderLine('Content-Type', $contentType)
             ->addHeaderLine('Content-Length', mb_strlen($content))
-            ->addHeaderLine('Content-Disposition','attachment; filename="'.$fileName.'"');
+            ->addHeaderLine('Content-Disposition', 'attachment; filename="' . $fileName . '"');
 
         return $response;
 
