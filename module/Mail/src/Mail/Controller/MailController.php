@@ -70,15 +70,14 @@ class MailController extends AbstractRestfulController
     public function create($data)
     {
         $text = new Mime\Part();
-        $text->type = Mime\Mime::TYPE_TEXT;
-        $text->charset = 'utf-8';
-        $attachments = $this->getRequest()->getFiles()->toArray()['attachment'];
-
-        $text = new Mime\Part();
-        $text->type = Mime\Mime::TYPE_TEXT;
+        if ($data['isHtml']){
+            $text->type = Mime\Mime::TYPE_HTML;
+        } else {
+            $text->type = Mime\Mime::TYPE_TEXT;
+        }
         $text->charset = 'utf-8';
         $text->setContent($data['body']);
-
+        $attachments = $this->getRequest()->getFiles()->toArray()['attachment'];
         $mimeMessage = new Mime\Message();
 
         $mimeMessage ->setParts([$text]);
@@ -99,10 +98,10 @@ class MailController extends AbstractRestfulController
         $message ->setSubject($data['subject'])
             ->setTo($data['receiverEmail'])
             ->setFrom("marek.mikusek@onet.eu");
-        if (isset($data['cc'])) {
+        if (strlen($data['cc'])>0) {
             $message->setCc($data['cc']);
         }
-        if (isset($data['bcc'])) {
+        if (strlen($data['bcc'])>0) {
             $message->setBcc($data['bcc'], '');
         }
         $transport = new SmtpTransport();
