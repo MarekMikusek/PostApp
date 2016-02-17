@@ -24,7 +24,6 @@ class MailController extends AbstractRestfulController
     public function readMailHeader(Message $mail, $id)
     {
         $return = [];
-
         $return['id'] = $id;
         $return['date'] = $mail->date;
         $return['from'] = $mail->from;
@@ -37,8 +36,6 @@ class MailController extends AbstractRestfulController
 
     public function readMail(Message $mail, $id)
     {
-        $return = [];
-
         $return = $this->readMailHeader($mail, $id);
         return $return;
     }
@@ -70,7 +67,7 @@ class MailController extends AbstractRestfulController
     public function create($data)
     {
         $text = new Mime\Part();
-        if ($data['isHtml']){
+        if ($data['isHtml']) {
             $text->type = Mime\Mime::TYPE_HTML;
         } else {
             $text->type = Mime\Mime::TYPE_TEXT;
@@ -80,10 +77,10 @@ class MailController extends AbstractRestfulController
         $attachments = $this->getRequest()->getFiles()->toArray()['attachment'];
         $mimeMessage = new Mime\Message();
 
-        $mimeMessage ->setParts([$text]);
+        $mimeMessage->setParts([$text]);
 
         foreach ($attachments as $attachment) {
-            $fileContent = fopen($attachment['tmp_name'],'r');
+            $fileContent = fopen($attachment['tmp_name'], 'r');
             $attachmentToMail = new Mime\Part($fileContent);
             $attachmentToMail->type = $attachment['type'];
             $attachmentToMail->filename = $attachment['name'];
@@ -92,16 +89,15 @@ class MailController extends AbstractRestfulController
             $mimeMessage->addPart($attachmentToMail);
         }
 
-
         $message = new \Zend\Mail\Message();
-        $message ->setBody($mimeMessage);
-        $message ->setSubject($data['subject'])
+        $message->setBody($mimeMessage);
+        $message->setSubject($data['subject'])
             ->setTo($data['receiverEmail'])
             ->setFrom("marek.mikusek@onet.eu");
-        if (strlen($data['cc'])>0) {
+        if (strlen($data['cc']) > 0) {
             $message->setCc($data['cc']);
         }
-        if (strlen($data['bcc'])>0) {
+        if (strlen($data['bcc']) > 0) {
             $message->setBcc($data['bcc'], '');
         }
         $transport = new SmtpTransport();
@@ -287,7 +283,6 @@ class MailController extends AbstractRestfulController
     {
         $attachmentList = [];
         $i = 1;
-        //$content='';
         foreach ($mail as $part) {
             if ($part->getHeaders()->has('Content-Disposition')) {
                 if ($part->getHeaderField('Content-Disposition') == 'attachment') {
@@ -295,19 +290,7 @@ class MailController extends AbstractRestfulController
                     $begin = strpos($string, 'filename=') + 10;
                     $end = strpos($string, '"', $begin + 1);
                     $fileName = substr($string, $begin, $end - $begin);
-//                    if ($part->getHeaderField('contenttransferencoding')=='base64')
-//                    {
-//                        $content .= base64_decode($part->getContent());
-//                    }
-//                    elseif ($part->getHeaderField('contenttransferencoding')=='quoted-encoding')
-//                    {
-//                        $content .= quoted_printable_decode($part->getContent());
-//                    }
-//                    else {
-//                        $content .= $part->getContent()."\n";
-//                    }
-//                    echo ("<br> Content:");
-//                    var_dump($content);
+
                     $attachmentList[] = ['id' => $i,
                         'filename' => $fileName];
                     $i++;
@@ -316,6 +299,5 @@ class MailController extends AbstractRestfulController
         }
         return $attachmentList;
     }
-
 
 }
